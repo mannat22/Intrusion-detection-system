@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 
 # Load model and encoders
-model = pickle.load(open('model.pkl', 'rb'))
+model = pickle.load(open('intrusion_detection_model.pkl', 'rb'))
 label_encoders = pickle.load(open('label_encoders.pkl', 'rb'))
 
 st.title("🔍 Detect Suspicious Network Activities using AI")
