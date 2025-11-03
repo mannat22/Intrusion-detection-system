@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load saved model and preprocessing tools
+# ---- Load saved model and preprocessing tools ----
 model = joblib.load("intrusion_detection_model.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoders = joblib.load("label_encoders.pkl")
@@ -33,24 +33,30 @@ encoded_browser = label_encoders['browser_type'].transform([browser])[0]
 
 # ---- Prepare input DataFrame ----
 input_data = pd.DataFrame({
-    'network_packet_size': [packet_size],
     'protocol_type': [encoded_protocol],
+    'encryption_used': [encoded_encryption],
+    'browser_type': [encoded_browser],
+    'network_packet_size': [packet_size],
     'login_attempts': [login_attempts],
     'session_duration': [session_duration],
-    'encryption_used': [encoded_encryption],
     'ip_reputation_score': [ip_score],
-    'failed_logins': [failed_logins],
-    'browser_type': [encoded_browser]
+    'failed_logins': [failed_logins]
 })
 
-# ---- Align feature order with scaler/model ----
-expected_features = getattr(scaler, 'feature_names_in_', None)
-if expected_features is not None:
-    # Add missing columns as 0, reorder to match
-    for col in expected_features:
-        if col not in input_data.columns:
-            input_data[col] = 0
-    input_data = input_data[expected_features]
+# ---- Align feature order with model/scaler ----
+# (Ensures the same column order as during training)
+if hasattr(model, "feature_names_in_"):
+    expected_features = list(model.feature_names_in_)
+elif hasattr(scaler, "feature_names_in_"):
+    expected_features = list(scaler.feature_names_in_)
+else:
+    expected_features = input_data.columns.tolist()
+
+# Add missing columns (if any) and reorder
+for col in expected_features:
+    if col not in input_data.columns:
+        input_data[col] = 0
+input_data = input_data[expected_features]
 
 # ---- Button for Prediction ----
 if st.button("🔍 Detect Intrusion"):
@@ -59,6 +65,7 @@ if st.button("🔍 Detect Intrusion"):
         input_scaled = scaler.transform(input_data)
         prediction = model.predict(input_scaled)[0]
 
+        # ---- Display Result ----
         if prediction == 1:
             st.error("⚠️ Suspicious Activity Detected!")
         else:
