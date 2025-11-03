@@ -11,50 +11,43 @@ label_encoders = joblib.load("label_encoders.pkl")
 st.title("🛡️ AI-Based Intrusion Detection System")
 st.write("Detect suspicious network activities using AI")
 
-# ---- Load encoder class lists ----
-protocol_classes = list(label_encoders['protocol_type'].classes_)
-encryption_classes = list(label_encoders['encryption_used'].classes_)
-browser_classes = list(label_encoders['browser_type'].classes_)
-
-# ---- Custom human-readable names (optional manual mapping) ----
-# You can edit these as per your dataset
-protocol_display_names = {
-    'tcp': 'TCP (Transmission Control Protocol)',
-    'udp': 'UDP (User Datagram Protocol)',
-    'icmp': 'ICMP (Internet Control Message Protocol)',
+# ---- Manually defined readable protocol names ----
+protocol_mapping = {
+    "TCP": 0,
+    "UDP": 1,
+    "ICMP": 2,
+    "HTTP": 3,
+    "HTTPS": 4
 }
 
-# Build dropdown display with readable labels
-protocol_display_list = [
-    protocol_display_names.get(proto.lower(), proto.upper())
-    for proto in protocol_classes
-]
+# ---- Optional readable encryption and browser names ----
+encryption_mapping = {
+    "DES": 0,
+    "AES": 1,
+    "RSA": 2
+}
 
-# ---- User Inputs ----
-protocol_display = st.selectbox("Protocol Type", protocol_display_list)
-encryption = st.selectbox("Encryption Used", encryption_classes)
-browser = st.selectbox("Browser Type", browser_classes)
+browser_mapping = {
+    "Chrome": 0,
+    "Firefox": 1,
+    "Edge": 2,
+    "Safari": 3
+}
+
+# ---- Streamlit Dropdowns ----
+protocol = st.selectbox("Protocol Type", list(protocol_mapping.keys()))
+encryption = st.selectbox("Encryption Used", list(encryption_mapping.keys()))
+browser = st.selectbox("Browser Type", list(browser_mapping.keys()))
 packet_size = st.number_input("Network Packet Size", min_value=0)
 login_attempts = st.number_input("Login Attempts", min_value=0)
 session_duration = st.number_input("Session Duration (sec)", min_value=0.0)
 ip_score = st.number_input("IP Reputation Score (0-1)", min_value=0.0, max_value=1.0)
 failed_logins = st.number_input("Failed Logins", min_value=0)
 
-# ---- Reverse-map the selected protocol back to the original label ----
-selected_protocol = None
-for key, value in protocol_display_names.items():
-    if value == protocol_display:
-        selected_protocol = key
-        break
-
-# If not in mapping, use as-is (for safety)
-if selected_protocol is None:
-    selected_protocol = protocol_display.lower()
-
-# ---- Encode categorical features ----
-encoded_protocol = label_encoders['protocol_type'].transform([selected_protocol])[0]
-encoded_encryption = label_encoders['encryption_used'].transform([encryption])[0]
-encoded_browser = label_encoders['browser_type'].transform([browser])[0]
+# ---- Convert readable choices into encoded values ----
+encoded_protocol = protocol_mapping[protocol]
+encoded_encryption = encryption_mapping[encryption]
+encoded_browser = browser_mapping[browser]
 
 # ---- Prepare input DataFrame ----
 input_data = pd.DataFrame({
