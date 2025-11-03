@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load saved model and preprocessing tools
+# ---- Load saved model and preprocessing tools ----
 model = joblib.load("intrusion_detection_model.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoders = joblib.load("label_encoders.pkl")
@@ -16,8 +16,22 @@ protocol_classes = list(label_encoders['protocol_type'].classes_)
 encryption_classes = list(label_encoders['encryption_used'].classes_)
 browser_classes = list(label_encoders['browser_type'].classes_)
 
+# ---- Custom human-readable names (optional manual mapping) ----
+# You can edit these as per your dataset
+protocol_display_names = {
+    'tcp': 'TCP (Transmission Control Protocol)',
+    'udp': 'UDP (User Datagram Protocol)',
+    'icmp': 'ICMP (Internet Control Message Protocol)',
+}
+
+# Build dropdown display with readable labels
+protocol_display_list = [
+    protocol_display_names.get(proto.lower(), proto.upper())
+    for proto in protocol_classes
+]
+
 # ---- User Inputs ----
-protocol = st.selectbox("Protocol Type", protocol_classes)
+protocol_display = st.selectbox("Protocol Type", protocol_display_list)
 encryption = st.selectbox("Encryption Used", encryption_classes)
 browser = st.selectbox("Browser Type", browser_classes)
 packet_size = st.number_input("Network Packet Size", min_value=0)
@@ -26,8 +40,19 @@ session_duration = st.number_input("Session Duration (sec)", min_value=0.0)
 ip_score = st.number_input("IP Reputation Score (0-1)", min_value=0.0, max_value=1.0)
 failed_logins = st.number_input("Failed Logins", min_value=0)
 
+# ---- Reverse-map the selected protocol back to the original label ----
+selected_protocol = None
+for key, value in protocol_display_names.items():
+    if value == protocol_display:
+        selected_protocol = key
+        break
+
+# If not in mapping, use as-is (for safety)
+if selected_protocol is None:
+    selected_protocol = protocol_display.lower()
+
 # ---- Encode categorical features ----
-encoded_protocol = label_encoders['protocol_type'].transform([protocol])[0]
+encoded_protocol = label_encoders['protocol_type'].transform([selected_protocol])[0]
 encoded_encryption = label_encoders['encryption_used'].transform([encryption])[0]
 encoded_browser = label_encoders['browser_type'].transform([browser])[0]
 
@@ -46,16 +71,14 @@ input_data = pd.DataFrame({
 # ---- Align feature order with scaler/model ----
 expected_features = getattr(scaler, 'feature_names_in_', None)
 if expected_features is not None:
-    # Add missing columns as 0, reorder to match
     for col in expected_features:
         if col not in input_data.columns:
             input_data[col] = 0
     input_data = input_data[expected_features]
 
-# ---- Button for Prediction ----
+# ---- Prediction Button ----
 if st.button("🔍 Detect Intrusion"):
     try:
-        # Scale and predict
         input_scaled = scaler.transform(input_data)
         prediction = model.predict(input_scaled)[0]
 
