@@ -43,6 +43,13 @@ if st.button("🔍 Detect"):
             'browser_type': [browser_encoded]
         })
 
+        # Ensure all expected features exist
+        expected_features = ['ip_reputation_score', 'unusual_time_access']
+        for col in expected_features:
+            if col not in input_data.columns:
+                # Add default neutral values (e.g., 0)
+                input_data[col] = 0
+
         # Scale the features
         input_scaled = scaler.transform(input_data)
 
