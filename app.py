@@ -10,31 +10,23 @@ label_encoders = joblib.load("label_encoders.pkl")
 st.title("🛡️ AI-Based Intrusion Detection System")
 st.write("Detect suspicious network activities using AI")
 
-# ---- Protocol Mapping (User-friendly → Model format) ----
-# Adjust the right-side values ("tcp", "udp", "icmp") to match label_encoders['protocol_type'].classes_
-protocol_map = {
-    "TCP": "tcp",
-    "UDP": "udp",
-    "ICMP": "icmp"
-}
+# ---- Auto-load classes from model encoders ----
+protocol_classes = list(label_encoders['protocol_type'].classes_)
+encryption_classes = list(label_encoders['encryption_used'].classes_)
+browser_classes = list(label_encoders['browser_type'].classes_)
 
 # ---- User Inputs ----
-protocol = st.selectbox("Protocol Type", list(protocol_map.keys()))
-encryption = st.selectbox("Encryption Used", list(label_encoders['encryption_used'].classes_))
-browser = st.selectbox("Browser Type", list(label_encoders['browser_type'].classes_))
+protocol = st.selectbox("Protocol Type", protocol_classes)
+encryption = st.selectbox("Encryption Used", encryption_classes)
+browser = st.selectbox("Browser Type", browser_classes)
 packet_size = st.number_input("Network Packet Size", min_value=0)
 login_attempts = st.number_input("Login Attempts", min_value=0)
 session_duration = st.number_input("Session Duration (sec)", min_value=0.0)
 ip_score = st.number_input("IP Reputation Score (0-1)", min_value=0.0, max_value=1.0)
 failed_logins = st.number_input("Failed Logins", min_value=0)
 
-# ---- Encode inputs safely ----
-try:
-    encoded_protocol = label_encoders['protocol_type'].transform([protocol_map[protocol]])[0]
-except ValueError:
-    st.error("⚠️ The selected protocol type is not recognized by the model.")
-    st.stop()
-
+# ---- Encode categorical features ----
+encoded_protocol = label_encoders['protocol_type'].transform([protocol])[0]
 encoded_encryption = label_encoders['encryption_used'].transform([encryption])[0]
 encoded_browser = label_encoders['browser_type'].transform([browser])[0]
 
